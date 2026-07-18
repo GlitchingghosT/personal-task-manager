@@ -2,8 +2,6 @@ import dotenv from "dotenv";
 
 import express from "express";
 // step-1: Import express framework after installation.
-import dns from "dns";
-
 import mongoose from "mongoose";
 // step-9: Import mongoose after installation to be able to connect to mongoDB.
 
@@ -16,14 +14,17 @@ const app = express();
 
 dotenv.config();
 
-const port = 2100;
+const port = Number(process.env.PORT ?? 2100);
 // step-3: Define the port number for the server. don't use this same port number on your laptop.
 
-app.use(cors());
+const clientOrigin = process.env.CLIENT_ORIGIN ?? "http://localhost:5173";
+
+app.disable("x-powered-by");
+app.use(cors({ origin: clientOrigin }));
 
 import taskRouter from "./routes/taskRouter";
 
-app.use(express.json());
+app.use(express.json({ limit: "100kb" }));
 
 app.use("/api/task", taskRouter);
 
@@ -36,7 +37,13 @@ app.use("/api/task", taskRouter);
 // step-8: Listen to both the database and the server together.
 
 const start = async () => {
-  await mongoose.connect(process.env.MONGO_URI!);
+  const mongoUri = process.env.MONGO_URI;
+
+  if (!mongoUri) {
+    throw new Error("MONGO_URI environment variable is required");
+  }
+
+  await mongoose.connect(mongoUri);
   console.log("Database connect successful");
 
   app.listen(port, () => {
@@ -45,11 +52,10 @@ const start = async () => {
   // step-5: Listen to the server after writing "npm run dev".
 };
 
-start();
-
-// nwachiemma03_db_user
-// RBeVZkmHgvcnYzvD
-// mongodb://redacted.invalid/removed
+start().catch(() => {
+  console.error("Failed to start server. Check database and environment configuration.");
+  process.exit(1);
+});
 
 // Server Files: this is where you run your server and connect to your database ===> from app.js ===> the model file
 // Model Files: this is used to define our data structure that will enter our database ===> from the model file we go to the ===> controller file

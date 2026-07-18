@@ -1,4 +1,7 @@
 {
+  "scripts": {
+    "scan:secrets": "node scripts/scan-secrets.mjs"
+  },
   "dependencies": {
     "express": "^5.2.1",
     "mongoose": "^9.6.2"
