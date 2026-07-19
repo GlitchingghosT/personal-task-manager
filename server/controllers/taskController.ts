@@ -1,67 +1,53 @@
-import { Request, Response } from "express";
+import type { Request, Response } from "express";
 import Task from "../models/taskModel";
-import { validateID } from "../utils/validateID";
+import { ApiError } from "../middleware/errorHandler";
 
-// CONTROLLER TO POST A NEW TASK
-export const createTask = async (req: Request, res: Response) => {
-  const { title, description, tag } = req.body;
+function taskResponse(task: {
+  _id: unknown;
+  title: string;
+  description: string;
+  tag: string;
+  createdAt: Date;
+  updatedAt: Date;
+}) {
+  return {
+    id: String(task._id),
+    title: task.title,
+    description: task.description,
+    tag: task.tag,
+    createdAt: task.createdAt.toISOString(),
+    updatedAt: task.updatedAt.toISOString(),
+  };
+}
 
-  if (!title || !description || !tag)
-    return res.status(400).json({ message: "All fields are required" });
+export async function createTask(req: Request, res: Response) {
+  const task = await Task.create({ owner: req.userId, ...req.body });
+  return res.status(201).json({ task: taskResponse(task) });
+}
 
-  const task = await Task.create(req.body);
-  res.status(201).json({ message: "Task created successfully", task });
-};
+export async function listTasks(req: Request, res: Response) {
+  const tasks = await Task.find({ owner: req.userId }).sort({ createdAt: -1, _id: -1 }).limit(500);
+  return res.json({ tasks: tasks.map(taskResponse) });
+}
 
-// CONTROLLER TO GET ALL TASKS
-export const getAllTask = async (req: Request, res: Response) => {
-  const tasks = await Task.find({});
-  res.status(200).json({ message: "All tasks retrieved successfully", tasks });
-};
+export async function getTask(req: Request, res: Response) {
+  const task = await Task.findOne({ _id: req.params.id, owner: req.userId });
+  if (!task) throw new ApiError(404, "NOT_FOUND", "Task not found.");
+  return res.json({ task: taskResponse(task) });
+}
 
-// CONTROLLER TO EDIT A TASK BY ID
-export const editTask = async (req: Request, res: Response) => {
-  const { id } = req.params;
+export async function updateTask(req: Request, res: Response) {
+  const task = await Task.findOneAndUpdate(
+    { _id: req.params.id, owner: req.userId },
+    { $set: req.body },
+    { returnDocument: "after", runValidators: true },
+  );
+  if (!task) throw new ApiError(404, "NOT_FOUND", "Task not found.");
+  return res.json({ task: taskResponse(task) });
+}
 
-  if (!validateID(id as string)) {
-    return res.status(400).json({ message: `Invalid ID:${id}` });
-  }
-
-  const task = await Task.findByIdAndUpdate(id, req.body, { new: true });
-  if (!task) {
-    return res.status(400).json({ message: "Task not found" });
-  }
-  res.status(200).json({ message: "Task updated successfully", task });
-};
-
-// CONTROLLER TO DELETE AN EXISTING TASK BY ID
-export const deleteTask = async (req: Request, res: Response) => {
-  const { id } = req.params;
-
-  if (!validateID(id as string)) {
-    return res.status(400).json({ message: `Invalid ID: ${id}` });
-  }
-  const task = await Task.findByIdAndDelete(id);
-  if (!task) {
-    return res.status(400).json({ message: "Task not found" });
-  }
-  res.status(200).json({ message: "Tasks deleted successfully" });
-};
-
-// CONTROLLER TO GET EACH TASK
-export const getTaskById = async (req: Request, res: Response) => {
-  const { id } = req.params;
-
-  if (!validateID(id as string)) {
-    return res.status(400).json({ message: `Invalid ID: ${id}` });
-  }
-  const task = await Task.findById(id);
-  if (!task) {
-    return res.status(400).json({ message: "Task not found" });
-  }
-  res.status(200).json({ message: "Tasks retrieved successfully", task });
-};
-
-// export default { createTask, getAllTask };
-
-// modules.export { createTask, getAllTask };
+export async function deleteTask(req: Request, res: Response) {
+  const task = await Task.findOneAndDelete({ _id: req.params.id, owner: req.userId });
+  if (!task) throw new ApiError(404, "NOT_FOUND", "Task not found.");
+  return res.status(204).send();
+}

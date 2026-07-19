@@ -1,79 +1,34 @@
-import React from "react";
-import { Link, useLocation } from "react-router-dom";
-import logo from "../assets/logo.png";
-import profile from "../assets/pro.img.png";
+import { Link, NavLink } from 'react-router-dom'
+import logo from '../assets/logo.png'
+import { useAuth } from '../context/auth-context'
 
-const Navbar: React.FC = () => {
-  const location = useLocation();
-  const allLinks = () => {
-    return location.pathname === "/" ? (
-      <>
-        <Link
-          to="/NewTask"
-          className="text-[16px] text-[#292929] font-semibold cursor-pointer hover:text-[#974FD0] hover:text-[17px]"
-        >
-          New Task
-        </Link>
-        <Link
-          to="/MyTask"
-          className="text-[16px] text-[#292929] font-semibold cursor-pointer hover:text-[#974FD0] hover:text-[17px]"
-        >
-          All Tasks
-        </Link>
-      </>
-    ) : location.pathname === "/MyTask" ? (
-      <Link
-        to="/NewTask"
-        className="text-[16px] text-[#292929] font-semibold cursor-pointer hover:text-[#974FD0] hover:text-[17px]"
-      >
-        New Task
-      </Link>
-    ) : location.pathname === "/NewTask" ? (
-      <Link
-        to="/MyTask"
-        className="text-[16px] text-[#292929] font-semibold cursor-pointer hover:text-[#974FD0] hover:text-[17px]"
-      >
-        All Tasks
-      </Link>
-    ) : location.pathname === "/EditTask" ? (
-      <Link
-        to="/MyTask"
-        className="text-[16px] text-[#292929] font-semibold cursor-pointer hover:text-[#974FD0] hover:text-[17px]"
-      >
-        All Tasks
-      </Link>
-    ) : null;
-  };
+export default function Navbar() {
+  const { user, logout, ready } = useAuth()
   return (
-    <nav className=" w-full sticky z-5 border border-[#B8B6B6] py-5 px-25 flex items-center justify-between">
-      <div className="flex items-center gap-3">
-        <img src={logo} alt="" aria-hidden="true" className="w-6" />
-        <Link
-          to="/"
-          className="text-[20px] text-[#2D0050] font-bold no-underline"
-        >
-          TaskDuty
+    <header className="site-header">
+      <nav className="nav container" aria-label="Main navigation">
+        <Link className="brand" to="/" aria-label="TaskDuty home">
+          <img src={logo} alt="" aria-hidden="true" />
+          <span>TaskDuty</span>
         </Link>
-      </div>
-      <div className="flex items-center gap-10 relative">
-        {/* <Link
-          to="/NewTask"
-          className="text-[16px] text-[#292929] font-semibold cursor-pointer hover:text-[#974FD0] hover:text-[17px]"
-        >
-          New Task
-        </Link>
-        <Link
-          to="/MyTask"
-          className="text-[16px] text-[#292929] font-semibold cursor-pointer hover:text-[#974FD0] hover:text-[17px]"
-        >
-          All Tasks
-        </Link> */}
-        {allLinks()}
-        <img src={profile} alt="Profile" className="w-11 z-1" />
-      </div>
-      <div aria-hidden="true" className="h-4 w-4 rounded-full bg-[#974FD0] absolute z-10 top-5 right-25"></div>
-    </nav>
-  );
-};
-
-export default Navbar;
+        <div className="nav-links">
+          {!ready ? (
+            <span className="user-name" role="status">Checking session…</span>
+          ) : user ? (
+            <>
+              <NavLink to="/tasks">My tasks</NavLink>
+              <NavLink to="/tasks/new">New task</NavLink>
+              <span className="user-name" title={user.email}>Hi, {user.name}</span>
+              <button className="button button-ghost button-small" type="button" onClick={logout}>Log out</button>
+            </>
+          ) : (
+            <>
+              <NavLink to="/login">Log in</NavLink>
+              <Link className="button button-primary button-small" to="/register">Get started</Link>
+            </>
+          )}
+        </div>
+      </nav>
+    </header>
+  )
+}

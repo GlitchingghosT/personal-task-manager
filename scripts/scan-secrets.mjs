@@ -3,7 +3,7 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 
-const trackedFiles = execFileSync("git", ["ls-files", "-z"], {
+const candidateFiles = execFileSync("git", ["ls-files", "--cached", "--others", "--exclude-standard", "-z"], {
   encoding: "utf8",
 }).split("\0").filter(Boolean).sort();
 
@@ -24,7 +24,7 @@ const rules = [
 
 const findings = [];
 
-for (const file of trackedFiles) {
+for (const file of candidateFiles) {
   let contents;
   try {
     contents = readFileSync(file);
@@ -49,4 +49,4 @@ if (findings.length > 0) {
   process.exit(1);
 }
 
-console.log(`[secret-scan] passed (${trackedFiles.length} tracked files checked)`);
+console.log(`[secret-scan] passed (${candidateFiles.length} tracked and untracked files checked)`);

@@ -1,26 +1,30 @@
-// import { useState } from "react";
-import "./App.css";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Navbar from "./components/Navbar";
-import HomePage from "./Pages/HomePage";
-import MyTask from "./Pages/MyTask";
-import NewTask from "./Pages/NewTask";
-import EditTask from "./Pages/EditTask";
+import './App.css'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import Navbar from './components/Navbar'
+import { ProtectedRoute } from './components/ProtectedRoute'
+import { AuthProvider } from './context/AuthContext'
+import { useAuth } from './context/auth-context'
+import HomePage from './Pages/HomePage'
+import AuthPage from './Pages/AuthPage'
+import MyTask from './Pages/MyTask'
+import NewTask from './Pages/NewTask'
+import EditTask from './Pages/EditTask'
 
-function App() {
-  return (
-    <>
-      <BrowserRouter>
-        <Navbar />
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/MyTask" element={<MyTask />} />
-          <Route path="/NewTask" element={<NewTask />} />
-          <Route path="/EditTask" element={<EditTask />} />
-        </Routes>
-      </BrowserRouter>
-    </>
-  );
+function UnknownRoute() {
+  const { user } = useAuth()
+  return <Navigate to={user ? '/tasks' : '/'} replace />
 }
 
-export default App;
+export default function App() {
+  return <BrowserRouter><AuthProvider><Navbar /><Routes>
+    <Route path="/" element={<HomePage />} />
+    <Route path="/login" element={<AuthPage mode="login" />} />
+    <Route path="/register" element={<AuthPage mode="register" />} />
+    <Route element={<ProtectedRoute />}>
+      <Route path="/tasks" element={<MyTask />} />
+      <Route path="/tasks/new" element={<NewTask />} />
+      <Route path="/tasks/:id/edit" element={<EditTask />} />
+    </Route>
+    <Route path="*" element={<UnknownRoute />} />
+  </Routes></AuthProvider></BrowserRouter>
+}

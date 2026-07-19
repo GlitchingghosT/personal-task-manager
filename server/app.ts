@@ -1,71 +1,38 @@
-import dotenv from "dotenv";
-
-import express from "express";
-// step-1: Import express framework after installation.
-import mongoose from "mongoose";
-// step-9: Import mongoose after installation to be able to connect to mongoDB.
-
-// dns.setServers(["8.8.8.8", "8.8.4.4"]);
-
 import cors from "cors";
+import dotenv from "dotenv";
+import express from "express";
+import helmet from "helmet";
+import mongoose from "mongoose";
+import authRouter from "./routes/authRouter";
+import taskRouter from "./routes/taskRouter";
+import { ApiError, errorHandler } from "./middleware/errorHandler";
+
+dotenv.config({ quiet: true });
 
 const app = express();
-// step-2: Activate express and put in a container called app.
-
-dotenv.config();
-
-const port = Number(process.env.PORT ?? 2100);
-// step-3: Define the port number for the server. don't use this same port number on your laptop.
-
-const clientOrigin = process.env.CLIENT_ORIGIN ?? "http://localhost:5173";
+const configuredClientOrigin = process.env.CLIENT_ORIGIN;
+if (process.env.NODE_ENV === "production" && !configuredClientOrigin) {
+  throw new Error("CLIENT_ORIGIN environment variable is required in production");
+}
+const clientOrigin = configuredClientOrigin ?? "http://localhost:5173";
 
 app.disable("x-powered-by");
+app.set("trust proxy", 1);
+app.use(helmet());
 app.use(cors({ origin: clientOrigin }));
-
-import taskRouter from "./routes/taskRouter";
-
 app.use(express.json({ limit: "100kb" }));
 
-app.use("/api/task", taskRouter);
-
-// step-4: Go to package.json under script and put "dev": nodemon app.ts to allow npm run dev work
-
-// step-6: Connect to mongoDB.
-
-// step-7: To connect to mongoDB first install mongoose.
-
-// step-8: Listen to both the database and the server together.
-
-const start = async () => {
-  const mongoUri = process.env.MONGO_URI;
-
-  if (!mongoUri) {
-    throw new Error("MONGO_URI environment variable is required");
-  }
-
-  await mongoose.connect(mongoUri);
-  console.log("Database connect successful");
-
-  app.listen(port, () => {
-    console.log(`server is running on PORT: ${port}`);
-  });
-  // step-5: Listen to the server after writing "npm run dev".
-};
-
-start().catch(() => {
-  console.error("Failed to start server. Check database and environment configuration.");
-  process.exit(1);
+app.get("/api/health", (_req, res) => {
+  const databaseReady = mongoose.connection.readyState === 1;
+  res.status(databaseReady ? 200 : 503).json({ status: databaseReady ? "ok" : "unavailable" });
 });
 
-// Server Files: this is where you run your server and connect to your database ===> from app.js ===> the model file
-// Model Files: this is used to define our data structure that will enter our database ===> from the model file we go to the ===> controller file
-// Controller Files(Business Logic): this file is used to define what happens between request and response. ===> from the controller files we go to the Routes files
-// Routes Files: this defines the request type and the route for that particular request type. from here back to the father ===> server file (app.js)
+app.use("/api/auth", authRouter);
+app.use("/api/tasks", taskRouter);
 
-// Other Files includes: middleware files, utility files e.t.c.
+app.use((_req, _res, next) => {
+  next(new ApiError(404, "NOT_FOUND", "Resource not found."));
+});
+app.use(errorHandler);
 
-// Assignment
-
-// CORS
-
-// AXIOS
+export default app;
